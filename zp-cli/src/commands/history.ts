@@ -13,14 +13,15 @@ TODO: put example of response
   async run() {
     await super.run();
 
-    // const { args, flags } = this.parse(History);
     cli.action.start(`Fetching history`);
     await this.showHistory();
     cli.action.stop();
+    process.exit();
   }
 
   private async showHistory() {
-    const history = await this.zp.myHistory();
+    const depositHistory = await this.zp.depositExternalHistory();
+    const txHistory = await this.zp.getBalanceAndHistory();
     /*
         Actions:
         1. Deposit ETH/Token
@@ -35,7 +36,7 @@ TODO: put example of response
     // todo: fetch token decimals
     // todo: fetch token names
     // todo: sort by block number
-    for (const d of history.deposits) {
+    for (const d of depositHistory) {
       let msg = `Deposit ${d.deposit.params.amount} wei\nBlock number: ${d.deposit.blockNumber}\n`;
 
       msg += d.spentInTx === '0'
@@ -45,12 +46,9 @@ TODO: put example of response
       this.log(msg + '\n');
     }
 
-    for (const utxo of history.utxos) {
-      const msg = `UTXO ${utxo.amount} wei\nBlock number: ${utxo.blockNumber}`;
-
+    for (const utxo of txHistory.historyItems) {
+      const msg = `UTXO ${utxo.amount} wei\nType ${utxo.type}\nBlock number: ${utxo.blockNumber}`;
       this.log(msg + '\n');
     }
   }
-
-
 }

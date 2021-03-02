@@ -38,7 +38,8 @@
     "swagger-ui-express": "^4.1.3",
     "truffle-hdwallet-provider": "^1.0.17",
     "uuid": "^7.0.1",
-    "zeropool-lib": "0.5.51-node"
+    "web3-core": "^1.3.4",
+    "zeropool-lib": "file:../lib"
   },
   "devDependencies": {
     "@nestjs/cli": "^6.13.2",

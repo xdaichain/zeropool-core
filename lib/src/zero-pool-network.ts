@@ -87,6 +87,7 @@ export class ZeroPoolNetwork {
         zpMnemonic: string,
         transactionJson: any,
         proverKey: any,
+        privateKey: string | undefined,
         cashedState?: MyUtxoState<string>,
         historyState?: HistoryState<string>,
     ) {
@@ -95,7 +96,7 @@ export class ZeroPoolNetwork {
         this.proverKey = proverKey;
         this.contractAddress = contractAddress;
         this.zpKeyPair = getBabyJubKeyPair(zpMnemonic);
-        this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
+        this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider, privateKey);
 
         if (cashedState) {
 
@@ -223,7 +224,7 @@ export class ZeroPoolNetwork {
             utxoZeroDelta
         );
 
-        const [tx, txHash] = await this.prepareTransaction(
+        const [tx,] = await this.prepareTransaction(
             token,
             utxoZeroDelta,
             utxoPair.utxoIn,
@@ -460,7 +461,7 @@ export class ZeroPoolNetwork {
         const owner = delta === 0n ? 0n : BigInt(this.ZeroPool.web3Ethereum.ethAddress || 0n);
 
         const txExternalFields: TxExternalFields<bigint> = {
-            owner: owner,
+            owner,
             message: [
                 {
                     data: encryptedUTXOs[0]

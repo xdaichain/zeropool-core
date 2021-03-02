@@ -31,10 +31,10 @@
     "fs": "0.0.1-security",
     "lodash": "^4.17.15",
     "path": "^0.12.7",
-    "zeropool-lib": "0.1.0"
+    "web3-eth": "1.3.4",
+    "zeropool-lib": "file:../lib"
   },
   "devDependencies": {
-    "tslib": "^1.10.0",
     "@oclif/dev-cli": "^1.22.2",
     "@oclif/test": "^1.2.5",
     "@types/chai": "^4.2.8",
@@ -48,6 +48,7 @@
     "mocha": "^5.2.0",
     "nyc": "^14.1.1",
     "ts-node": "^8.6.2",
+    "tslib": "^1.10.0",
     "typescript": "^3.7.5"
   },
   "engines": {

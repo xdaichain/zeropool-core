@@ -3,6 +3,7 @@ import { DomainEthereum, HdWallet } from '@buttonwallet/blockchain-ts-wallet-cor
 import { getEthereumAddress, ZeroPoolNetwork } from 'zeropool-lib';
 import { cosmiconfig } from 'cosmiconfig';
 import { Config } from 'cosmiconfig/dist/types';
+const Eth = require('web3-eth');
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -75,9 +76,19 @@ export default class Base extends Command {
       description: 'ZeroPool smart contract address',
     }),
 
+    sideChainContract: flags.string({
+      char: 'i',
+      description: 'ZeroPool sidechain smart contract address',
+    }),
+
     rpc: flags.string({
       char: 'e',
       description: 'Ethereum JSON-RPC endpoint',
+    }),
+
+    gasRpc: flags.string({
+      char: 'g',
+      description: 'Gas JSON-RPC endpoint',
     }),
 
     relayer: flags.string({
@@ -101,6 +112,10 @@ export default class Base extends Command {
       description: 'Address of ZeroPool smart contract',
     },
     {
+      name: 'sideChainContract',
+      description: 'Address of ZeroPool sidechain smart contract',
+    },
+    {
       name: 'zpMnemonic',
       description: 'Mnemonic that is used for ZeroPool address generation',
     },
@@ -121,6 +136,10 @@ export default class Base extends Command {
       description: 'Ethereum JSON-RPC endpoint',
     },
     {
+      name: 'gasRpc',
+      description: 'Gas JSON-RPC endpoint',
+    },
+    {
       name: 'relayer',
       description: 'Relayer endpoint',
     },
@@ -133,17 +152,20 @@ export default class Base extends Command {
 
   // ZeroPool contract address
   contractAddress = '';
+  sideChainContractAddress = '';
 
   // Mnemonic that we use for both ZeroPool and Ethereum
   zpMnemonic = '';
   ethSecret = '';
 
   amount = 0;
+  gasFee = 320 * (10 ** 9);
 
   to = '';
 
   asset = ''; // Address or 'ETH'
   rpcEndpoint = '';
+  gasRpcEndpoint = '';
   relayerEndpoint = '';
 
   // @ts-ignore
@@ -156,8 +178,11 @@ export default class Base extends Command {
   // @ts-ignore
   zp: ZeroPoolNetwork;
 
+  // @ts-ignore
+  gasZp: ZeroPoolNetwork;
+
   async loadConfig(pathToConfig?: string): Promise<Config> {
-    const explorer = cosmiconfig('alice');
+    const explorer = cosmiconfig('dev');
     const result = pathToConfig
       ? await explorer.load(pathToConfig)
       : await explorer.search();
@@ -178,11 +203,13 @@ export default class Base extends Command {
     const fromConfigSafe = (argName: string) => config && config[argName];
 
     this.contractAddress = flags.contract || args.contract || fromConfigSafe('contract');
+    this.sideChainContractAddress = flags.sideChainContract || args.sideChainContract || fromConfigSafe('sideChainContract');
     this.ethSecret = flags.ethSecret || args.ethSecret || fromConfigSafe('ethSecret');
     this.zpMnemonic = flags.zpMnemonic || args.zpMnemonic || fromConfigSafe('zpMnemonic');
     this.amount = flags.value || args.value || fromConfigSafe('value');
     this.asset = flags.asset || args.asset || fromConfigSafe('asset');
     this.rpcEndpoint = flags.rpc || args.rpc || fromConfigSafe('rpc');
+    this.gasRpcEndpoint = flags.gasRpc || args.gasRpc || fromConfigSafe('gasRpc');
     this.relayerEndpoint = flags.relayer || args.relayer || fromConfigSafe('relayer');
     this.to = flags.to || args.to;
 
@@ -196,20 +223,29 @@ export default class Base extends Command {
       this.ethAddress = getEthereumAddress(this.ethSecret);
     }
 
-    // ethAccount:
-    // {
-    //    privateKey: string;
-    //    publicKey: string;
-    //    address: string;
-    // }
-
+    const web3 = new Eth(this.rpcEndpoint)
     this.zp = new ZeroPoolNetwork(
       this.contractAddress,
-      this.ethSecret,
+      web3,
       this.zpMnemonic,
       transactionJson,
       proverKey,
-      this.rpcEndpoint
+      this.ethSecret,
+      undefined,
+      undefined
+    );
+
+
+    const gasWeb3 = new Eth(this.gasRpcEndpoint);
+    this.gasZp = new ZeroPoolNetwork(
+      this.sideChainContractAddress,
+      gasWeb3,
+      this.zpMnemonic,
+      transactionJson,
+      proverKey,
+      undefined,
+      undefined,
+      undefined
     );
 
     this.log('-------------------------------------------------');

@@ -12,6 +12,7 @@ export type TransactionParams = {
     from?: string | number;
     to: string;
     value?: number | string;
+    gas?: number;
     gasPrice?: number | string;
     data?: string;
     nonce?: number;
@@ -21,15 +22,20 @@ export class Web3Ethereum {
 
     // @ts-ignore
     public ethAddress: string;
+    private privateKey: string | undefined;
 
     private web3: Web3;
 
-    constructor(provider: HttpProvider) {
+    constructor(provider: HttpProvider, privateKey: string | undefined) {
         this.web3 = new Web3(provider);
         this.web3.eth.getAccounts()
             .then((addresses: string[]) => {
                 if (addresses.length === 0) {
-                    console.warn('web3 provider has not addresses');
+                    if (privateKey) {
+                        this.ethAddress = getEthereumAddress(privateKey)
+                        this.privateKey = privateKey
+                    }
+                    else console.warn('web3 provider has no addresses')
                 } else {
                     this.ethAddress = addresses[0];
                 }
@@ -76,6 +82,25 @@ export class Web3Ethereum {
         return this.web3.eth.abi.decodeParameters(types, hex)
     }
 
+    async waitBlockNumber(blockNumber: number) {
+        console.log(`waiting until ${blockNumber} block is mined`)
+        const subscription = this.web3.eth.subscribe('newBlockHeaders')
+        const res = await (new Promise(resolve => {
+            subscription
+                .on('data', blockHeader => {
+                    const left = blockNumber - blockHeader.number
+                    console.log(`${Math.max(left, 0)} blocks left`)
+                    if (left <= 0) resolve(true)
+                })
+                .on('error', error => {
+                    console.log(error)
+                    resolve(false)
+                })
+        }))
+        subscription.unsubscribe()
+        return res
+    }
+
     async sendTransaction(
         txParams: TransactionParams,
         confirmations = 1,
@@ -90,19 +115,30 @@ export class Web3Ethereum {
             ? await this.web3.eth.getGasPrice()
             : txParams.gasPrice;
 
+        const callback = (error: any, txHash: string | undefined) => {
+            if (error) {
+                console.log(error)
+                onTransactionHash && onTransactionHash(error, undefined)
+            }
+        }
+        const txConfig = {
+            nonce: nonce,
+            data: txParams.data || '',
+            gasPrice: toHex(gasPrice),
+            // todo : remove const
+            gasLimit: txParams.gas || toHex(70000),
+            to: txParams.to,
+            from: txParams.from || this.ethAddress,
+            value: toHex(txParams.value || 0)
+        }
+
+        // If we have `priviteKey` sign transaction locally
+        const promiEvent = this.privateKey
+            ? this.web3.eth.sendSignedTransaction('0x' + sign(txConfig, this.privateKey), callback)
+            : this.web3.eth.sendTransaction(txConfig, callback)
+
         return new Promise((resolve) => {
-            this.web3.eth.sendTransaction({
-                nonce: nonce,
-                data: txParams.data || '',
-                gasPrice: toHex(gasPrice),
-                to: txParams.to,
-                from: txParams.from || this.ethAddress,
-                value: toHex(txParams.value || 0)
-            }, (error: any, txHash: string | undefined) => {
-                if (error) {
-                    onTransactionHash && onTransactionHash(error, undefined)
-                }
-            })
+            promiEvent
                 .on('transactionHash', (transactionHash: string) => {
                     onTransactionHash && onTransactionHash(undefined, transactionHash);
                     if (confirmations === 0) {
@@ -115,6 +151,7 @@ export class Web3Ethereum {
                     }
                 })
                 .on('confirmation', (num: any, receipt: any) => {
+                    console.log(`${num+1} confirmations`)
                     if (num === confirmations - 1) {
                         resolve(receipt);
                     }

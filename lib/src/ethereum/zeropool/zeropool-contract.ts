@@ -31,10 +31,11 @@ export class ZeroPoolContract {
 
     constructor(
         contractAddress: string,
-        web3Provider: HttpProvider
+        web3Provider: HttpProvider,
+        privateKey: string | undefined
     ) {
         this.contractAddress = contractAddress;
-        this.web3Ethereum = new Web3Ethereum(web3Provider);
+        this.web3Ethereum = new Web3Ethereum(web3Provider, privateKey);
         this.instance = this.web3Ethereum.createInstance(ZeroPoolAbi, contractAddress);
     }
 

@@ -1,7 +1,10 @@
 import cli from 'cli-ux'
+import { tw } from 'zeropool-lib';
 import Base from '../base';
 
 const axios = require('axios').default;
+
+const timeout = (ms: number) => new Promise(res => setTimeout(res, ms))
 
 export default class Withdraw extends Base {
   static description = 'Show ZeroPool tx history'
@@ -17,30 +20,34 @@ TODO: put example of response
 
     cli.action.start(`Prepare withdraw transaction ${this.asset}`);
 
-    const numOfInputs = 1;
-    const myUtxo = await this.zp.myUtxos();
-    // @ts-ignore
-    const withdrawAmount = myUtxo.slice(0, numOfInputs).reduce((acc: any, item: any) => {
-      return acc + item.amount;
-    }, 0n);
-    const [blockItem, txHash] = await this.zp.prepareWithdraw(this.assetAddress, numOfInputs);
+    const withdrawAmount = tw(this.amount).toNumber();
+    const [tx, depositBlockNumber] = await this.zp.prepareWithdraw(this.assetAddress, withdrawAmount);
+    this.log('TX', tx)
 
-    cli.action.start(`Send transaction to relayer (waiting 2 confirmations) ${this.relayerEndpoint}`);
-    const res = await axios.post(`${this.relayerEndpoint}/tx`, blockItem);
-    cli.url('View transaction on Etherscan', this.etherscanPrefix + res.data.transactionHash);
+    const [gasTx,] = await this.gasZp.prepareWithdraw(this.assetAddress, this.gasFee)
+    this.log('Gas TX', gasTx)
 
-    cli.action.start(`Withdraw (waiting 2 confirmations)`);
-    const withdrawRes = await this.zp.withdraw({
-      utxo: {
-        token: this.assetAddress,
-        owner: this.zp.ethAddress,
-        amount: Number(withdrawAmount)
-      },
-      blockNumber: res.data.blockNumber - 1,
-      txHash: txHash
+    cli.action.start(`Send transaction to relayer ${this.relayerEndpoint}`);
+    const res = await axios.post(`${this.relayerEndpoint}/tx`, {
+      tx,
+      gasTx,
+      depositBlockNumber
     });
-    // @ts-ignore
-    cli.url('View Withdraw on Etherscan', this.etherscanPrefix + withdrawRes.transactionHash);
+    cli.info(`Tx hash: ${res.data.transactionHash}`)
+
+    // todo: ZeroPool withdrawal note is not updated instantly
+    await timeout(5000)
+
+    const withdrawals = await this.zp.getActiveWithdrawals()
+    this.log('Active withdrawals', withdrawals)
+
+    // ZerooPool `withdraw` call reqires ten blocks (CHALLENGE_EXPIRES_BLOCKS)
+    // to be mined after withdrawal utxo has been sent
+    await this.zp.ZeroPool.web3Ethereum.waitBlockNumber(withdrawals[0].blockNumber + 10)
+
+    cli.action.start(`Withdraw`);
+    const withdrawRes = await this.zp.withdraw(withdrawals[0]);
+    this.log('Withdraw TX hash', withdrawRes)
 
     cli.action.stop();
 

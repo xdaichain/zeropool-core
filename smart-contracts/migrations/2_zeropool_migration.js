@@ -17,7 +17,9 @@ module.exports = async function(deployer, network, accounts) {
     }]
   }, [accounts[0]]);
 
-console.log(hardforkcalldata)
+  console.log(hardforkcalldata)
   await mainnetProxy.hardfork(ZeroPool.address, hardforkcalldata);
 
+  const zp = await ZeroPool.deployed()
+  console.log(await zp.init(accounts[0]))
 };

@@ -13,15 +13,17 @@ hello world from ./src/hello.ts!
 
   async run() {
     await super.run();
-    const { args, flags } = this.parse(Balance);
 
     cli.action.start(`Fetching balance`);
     const balances = await this.zp.getBalance();
+    console.log(balances)
     if (Object.keys(balances).length === 0) {
       this.log(`Your balance: 0 zpETH`);
       return;
     }
-    this.log(`Your balance: ${ fw(balances['0x0']) } zpETH`);
+    this.log(`Your balance: ${ fw(balances['0x0000000000000000000000000000000000000000']) } zpETH`);
+
+    process.exit();
   }
 
 }

@@ -30,6 +30,7 @@
     "@truffle/hdwallet-provider": "^1.0.29",
     "circomlib": "0.0.20",
     "dotenv": "^8.2.0",
+    "eth-json-rpc-filters": "^4.2.2",
     "web3": "^1.2.6"
   },
   "devDependencies": {

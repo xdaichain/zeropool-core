@@ -14,17 +14,26 @@ TODO: put example of response
 
   async run(): Promise<void> {
     await super.run();
-    // todo: check not enough funds
 
     cli.action.start(`Prepare transfer transaction ${this.amount} ${this.asset}`);
-    const amountOfAsset = tw(this.amount).toNumber();
-    const [blockItem, txHash] = await this.zp.transfer(this.assetAddress, this.to, amountOfAsset);
 
-    cli.action.start(`Send transaction to relayer (waiting 2 confirmations) ${this.relayerEndpoint}`);
-    const res = await axios.post(`${this.relayerEndpoint}/tx`, blockItem);
-    cli.url('View transaction on Etherscan', this.etherscanPrefix + res.data.transactionHash);
+    const amountOfAsset = tw(this.amount).toNumber();
+    const [tx, depositBlockNumber] = await this.zp.transfer(this.assetAddress, this.to, amountOfAsset)    
+    this.log('TX ', tx)
+
+    const [gasTx,] = await this.gasZp.prepareWithdraw(this.assetAddress, this.gasFee)
+    this.log('Gas TX ', gasTx)
+
+    cli.action.start(`Send transaction to relayer ${this.relayerEndpoint}`);
+    const res = await axios.post(`${this.relayerEndpoint}/tx`, {
+      depositBlockNumber,
+      tx,
+      gasTx
+    })
 
     cli.action.stop();
+
+    cli.info(`Tx hash: ${res.data.transactionHash}`)
 
     process.exit();
   }
