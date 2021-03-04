@@ -19,10 +19,9 @@ hello world from ./src/hello.ts!
     console.log(balances)
     if (Object.keys(balances).length === 0) {
       this.log(`Your balance: 0 zpETH`);
-      return;
+    } else {
+      this.log(`Your balance: ${ fw(balances['0x0000000000000000000000000000000000000000']) } zpETH`);
     }
-    this.log(`Your balance: ${ fw(balances['0x0000000000000000000000000000000000000000']) } zpETH`);
-
     process.exit();
   }
 

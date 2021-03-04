@@ -20,16 +20,14 @@ TODO: put example of response
     const amountOfAsset = tw(this.amount).toNumber();
     const [tx, zeroPoolTxHash] = await this.zp.prepareDeposit(this.assetAddress, amountOfAsset)
     this.log('TX', tx)
-    const depositBlockNumber = (await this.zp.deposit(this.assetAddress, amountOfAsset, zeroPoolTxHash)).toString();
 
-    const [gasTx,] = await this.gasZp.prepareWithdraw(this.assetAddress, this.gasFee)
-    this.log('Gas TX', gasTx)
+    const depositBlockNumber = (await this.zp.deposit(this.assetAddress, amountOfAsset, zeroPoolTxHash)).toString();
+    this.log('Block Number', depositBlockNumber)
 
     cli.action.start(`Send transaction to relayer ${ this.relayerEndpoint }`);
     const res = await axios.post(`${ this.relayerEndpoint }/tx`, {
-      depositBlockNumber,
       tx,
-      gasTx
+      depositBlockNumber,
     });
 
     cli.action.stop();

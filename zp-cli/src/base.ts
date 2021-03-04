@@ -230,23 +230,11 @@ export default class Base extends Command {
       this.zpMnemonic,
       transactionJson,
       proverKey,
-      this.ethSecret,
       undefined,
       undefined
     );
-
-
-    const gasWeb3 = new Eth(this.gasRpcEndpoint);
-    this.gasZp = new ZeroPoolNetwork(
-      this.sideChainContractAddress,
-      gasWeb3,
-      this.zpMnemonic,
-      transactionJson,
-      proverKey,
-      undefined,
-      undefined,
-      undefined
-    );
+    await this.zp.ZeroPool.web3Ethereum.init()
+    await this.zp.ZeroPool.web3Ethereum.setLocalAddress(this.ethSecret)
 
     this.log('-------------------------------------------------');
     this.log(`ZeroPool contract address = ${ this.contractAddress }`);

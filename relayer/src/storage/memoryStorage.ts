@@ -1,5 +1,5 @@
 import { IStorage } from './IStorage';
-import { Block, BlockItem, MerkleTree } from 'zeropool-lib';
+import { Block, BlockItem, merkleTree } from 'zeropool-lib';
 
 
 export class MemoryStorage implements IStorage {
@@ -7,7 +7,7 @@ export class MemoryStorage implements IStorage {
     constructor(public storageName?: string) {
     }
 
-    public utxoTree = MerkleTree(32 + 1);
+    public utxoTree = merkleTree(32 + 1);
 
     private blockItems: BlockItem<string>[] = [];
     private rootHashList: string[][] = [];

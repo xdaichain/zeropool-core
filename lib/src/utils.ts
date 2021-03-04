@@ -34,7 +34,7 @@ export function fromHex(hex: string): number {
     return parseInt(hex, 16);
 }
 
-export function MerkleTree(height: number): IMerkleTree {
+export function merkleTree(height: number): IMerkleTree {
     return new MT(height);
 }
 

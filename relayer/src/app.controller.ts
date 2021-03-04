@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpException, HttpStatus, Post } from '@nestjs/
 import { ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { zp } from './zeroPool';
-import { GasDonationRequest, RelayerAddressResponse, TransactionRequest, TransactionResponse } from './transaction.dto';
+import { RelayerAddressResponse, TransactionRequest, TransactionResponse } from './transaction.dto';
 import { Observable } from "rxjs";
 import { map, take } from "rxjs/operators";
 
@@ -22,43 +22,16 @@ export class AppController {
         </div>`;
     }
 
-    @Post('tx/donation')
-    @ApiCreatedResponse({
-        description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain ',
-    })
-    postGasDonation(@Body() gd: GasDonationRequest): Observable<TransactionResponse> {
-        return this.appService.publishGasDonation(gd.gasTx, gd.donationHash).pipe(
-            map((processedGasTx) => {
-                if (processedGasTx.error) {
-                    throw new HttpException(processedGasTx.error, HttpStatus.INTERNAL_SERVER_ERROR)
-                }
-
-                if (typeof processedGasTx.txData === 'string') {
-                    return {
-                        transactionHash: processedGasTx.txData
-                    };
-                }
-
-                return processedGasTx.txData;
-            }),
-            take(1)
-        );
-    }
-
     @Post('tx')
     @ApiCreatedResponse({
         description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain ' +
             'Returns hash of Ethereum subchain transaction that post a block on the smart contract',
     })
     postTransaction(@Body() wtx: TransactionRequest): Observable<TransactionResponse> {
-        return this.appService.publishTransaction(wtx.tx, wtx.depositBlockNumber, wtx.gasTx).pipe(
-            map(([processedTx, processedGasTx]) => {
+        return this.appService.publishTransaction(wtx.tx, wtx.depositBlockNumber).pipe(
+            map(processedTx => {
                 if (processedTx.error) {
                     throw new HttpException(processedTx.error, HttpStatus.INTERNAL_SERVER_ERROR)
-                }
-
-                if (processedGasTx.error) {
-                    throw new HttpException(processedGasTx.error, HttpStatus.INTERNAL_SERVER_ERROR)
                 }
 
                 if (typeof processedTx.txData === 'string') {

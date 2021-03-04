@@ -50,7 +50,7 @@ const zrpPath = 'm/44\'/0\'/0\'/0/';
 export function getBabyJubKeyPair(mnemonic: string, path: number = 0): KeyPair {
     const privateKey = HdWallet.Privkey(mnemonic, zrpPath + path).k;
     return {
-        privateKey: privateKey,
+        privateKey,
         publicKey: getBabyJubPublicKey(privateKey)
     }
 }

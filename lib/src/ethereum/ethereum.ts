@@ -4,7 +4,6 @@ import { Contract, EventData } from 'web3-eth-contract';
 import { HttpProvider } from 'web3-providers-http';
 import { Transaction, TransactionReceipt } from 'web3-core';
 import { addHexPrefix, privateToAddress, toChecksumAddress } from 'ethereumjs-util';
-import { Transaction as Tx, TxData } from 'ethereumjs-tx';
 import { BigNumber } from 'bignumber.js'
 import { toHex } from "../utils";
 
@@ -23,23 +22,25 @@ export class Web3Ethereum {
     // @ts-ignore
     public ethAddress: string;
     private privateKey: string | undefined;
+    private isInit = false;
 
     private web3: Web3;
 
-    constructor(provider: HttpProvider, privateKey: string | undefined) {
+    constructor(provider: HttpProvider) {
         this.web3 = new Web3(provider);
-        this.web3.eth.getAccounts()
-            .then((addresses: string[]) => {
-                if (addresses.length === 0) {
-                    if (privateKey) {
-                        this.ethAddress = getEthereumAddress(privateKey)
-                        this.privateKey = privateKey
-                    }
-                    else console.warn('web3 provider has no addresses')
-                } else {
-                    this.ethAddress = addresses[0];
-                }
-            });
+        this.init()
+    }
+
+    async init() {
+        if (this.isInit) return;
+        const addresses = await this.web3.eth.getAccounts()
+        if (addresses.length !== 0) this.ethAddress = addresses[0]
+        this.isInit = true
+    }
+
+    setLocalAddress(privateKey: string) {
+        this.ethAddress = getEthereumAddress(privateKey)
+        this.privateKey = privateKey
     }
 
     createInstance(abi: AbiItem[], address?: string,): Contract {
@@ -105,7 +106,9 @@ export class Web3Ethereum {
         txParams: TransactionParams,
         confirmations = 1,
         onTransactionHash?: (error: any, txHash: string | undefined) => void
-    ): Promise<string | Transaction> {
+    ): Promise<string | TransactionReceipt> {
+
+        if (!this.isInit) await this.init()
 
         const nonce = !txParams.nonce
             ? await this.web3.eth.getTransactionCount(this.ethAddress)
@@ -121,37 +124,42 @@ export class Web3Ethereum {
                 onTransactionHash && onTransactionHash(error, undefined)
             }
         }
-        const txConfig = {
-            nonce: nonce,
+
+        const txConfig: TransactionParams = {
+            nonce,
             data: txParams.data || '',
             gasPrice: toHex(gasPrice),
-            // todo : remove const
-            gasLimit: txParams.gas || toHex(70000),
             to: txParams.to,
             from: txParams.from || this.ethAddress,
             value: toHex(txParams.value || 0)
         }
+        const gasEstimate = await this.web3.eth.estimateGas(txConfig)
 
         // If we have `priviteKey` sign transaction locally
         const promiEvent = this.privateKey
-            ? this.web3.eth.sendSignedTransaction('0x' + sign(txConfig, this.privateKey), callback)
+            ? this.web3.eth.sendSignedTransaction(
+                await sign(
+                    this.web3,
+                    {...txConfig, gas: gasEstimate},
+                    this.privateKey || '',
+                    await this.web3.eth.getChainId()
+                ), callback)
             : this.web3.eth.sendTransaction(txConfig, callback)
 
         return new Promise((resolve) => {
             promiEvent
-                .on('transactionHash', (transactionHash: string) => {
+                .on('transactionHash', transactionHash => {
                     onTransactionHash && onTransactionHash(undefined, transactionHash);
                     if (confirmations === 0) {
                         resolve(transactionHash);
                     }
                 })
-                .on('receipt', (receipt: any) => {
+                .on('receipt', receipt => {
                     if (confirmations === 1) {
                         resolve(receipt);
                     }
                 })
-                .on('confirmation', (num: any, receipt: any) => {
-                    console.log(`${num+1} confirmations`)
+                .on('confirmation', (num, receipt) => {
                     if (num === confirmations - 1) {
                         resolve(receipt);
                     }
@@ -178,46 +186,21 @@ export class Web3Ethereum {
                 });
         })
     }
-
-    async signTransactionCustom(
-        privateKey: string,
-        to: string,
-        value: number | string,
-        data: string = ""
-    ) {
-        const from = getEthereumAddress(privateKey);
-
-        const nonce = await this.web3.eth.getTransactionCount(from)
-            .then((x: number): string => toHex(x));
-
-        const gasPrice = await this.web3.eth.getGasPrice()
-            .then((x: string): string => toHex(x));
-
-        const gas = data
-
-            ? await this.web3.eth.estimateGas({ to, data, gas: 5000000, from, value })
-                .then((x: number): string => toHex(tbn(x).times(1.2).integerValue()))
-
-            : toHex(21000);
-
-        value = toHex(value);
-
-        const txParam: TxData = { nonce, to, value, data, gasPrice, gasLimit: gas };
-
-        return sign(txParam, privateKey);
-    }
 }
 
-function sign(txParam: TxData, privateKey: string): string {
+async function sign(web3: Web3, txParam: TransactionParams, privateKey: string, chainId: number): Promise<string> {
     if (privateKey.indexOf('0x') === 0) {
         privateKey = privateKey.substring(2);
     }
+    const signedTx = await web3.eth.accounts.signTransaction(
+        {
+            ...txParam,
+            chainId
+        },
+        privateKey
+    )
 
-    const tx = new Tx(txParam, { chain: 'rinkeby' });
-    const privateKeyBuffer = Buffer.from(privateKey, 'hex');
-    tx.sign(privateKeyBuffer);
-    const serializedTx = tx.serialize();
-    return serializedTx.toString('hex');
+    return signedTx.rawTransaction || '0x'
 }
 
 export const hash = keccak256;

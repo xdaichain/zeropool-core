@@ -4,7 +4,7 @@ import { Tx } from './transaction.dto';
 import { gasZp, zp } from './zeroPool';
 import { MemoryStorage } from './storage/memoryStorage';
 import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
-import { Block, BlockItem, IMerkleTree, MerkleTree, Tx as ZpTx, ZeroPoolNetwork } from 'zeropool-lib';
+import { Block, BlockItem, IMerkleTree, merkleTree, Tx as ZpTx, ZeroPoolNetwork } from 'zeropool-lib';
 import { IStorage } from './storage/IStorage';
 import { combineLatest, concat, Observable, of, Subject } from 'rxjs';
 import { bufferTime, catchError, concatMap, delay, filter, map, mergeMap, take } from 'rxjs/operators';
@@ -47,9 +47,6 @@ export class AppService {
     private tx$ = new Subject<TxContract>();
     private processedTx$ = new Subject<ProcessedTx>();
 
-    private gasTx$ = new Subject<TxContract>();
-    private processedGasTx$ = new Subject<ProcessedTx>();
-
     constructor() {
 
         const t1 = performance.now();
@@ -66,74 +63,13 @@ export class AppService {
                     this.processedTx$.next(processedTx);
                 })
             });
-
-            this.txPipe(this.gasTx$, gasZp, gasStorage, 1).subscribe((data: ProcessedTx[]) => {
-                data.forEach((processedTx) => {
-                    this.processedGasTx$.next(processedTx);
-                })
-            });
-
         });
-    }
-
-    // todo: move it to db/redis
-    private donationHashList = [];
-
-    public publishGasDonation(gasTx: Tx, donationHash: string): Observable<any> {
-        // todo: add storing hashes
-        const transactionChecks = Promise.all([
-            zp.ZeroPool.web3Ethereum.getTransactionReceipt(donationHash),
-            zp.ZeroPool.web3Ethereum.getTransaction(donationHash)
-        ]);
-
-        return fromPromise(transactionChecks).pipe(
-            mergeMap(([receipt, ethTx]) => {
-                if (!receipt) {
-                    throw new Error('transaction not found');
-                }
-                if (!receipt.status) {
-                    throw new Error('transaction failed');
-                }
-                if (BigInt(ethTx.value) !== BigInt(gasTx.delta)) {
-                    throw new Error('tx value !== zp tx delta');
-                }
-                if (ethTx.to !== zp.ZeroPool.web3Ethereum.ethAddress) {
-                    throw new Error('transaction not to relayer');
-                }
-                if (this.donationHashList.indexOf(donationHash) !== -1) {
-                    throw new Error('donation already exists');
-                }
-                this.donationHashList.push(donationHash);
-
-                const id = generateTxId();
-
-                this.gasTx$.next({
-                    payload: {
-                        depositBlockNumber: '0x0',
-                        tx: packZpTx(gasTx)
-                    }, id
-                });
-
-                return this.processedGasTx$.pipe(
-                    filter((processedTx) => processedTx.id === id),
-                    take(1),
-                );
-            }),
-            take(1)
-        );
-
     }
 
     public publishTransaction(
         tx: Tx,
         depositBlockNumber: string,
-        gasTx: Tx,
-    ): Observable<ProcessedTx[]> {
-
-        if (BN128_R - BigInt(gasTx.delta) < 320n * (10n ** 9n)) {
-            throw new Error('not enough gas');
-        }
-
+    ): Observable<ProcessedTx> {
         const id = generateTxId();
 
         this.tx$.next({
@@ -143,24 +79,12 @@ export class AppService {
             }, id
         });
 
-        this.gasTx$.next({
-            payload: {
-                depositBlockNumber: '0x0',
-                tx: packZpTx(gasTx)
-            }, id
-        });
-
-        const gasResult$ = this.processedGasTx$.pipe(
-            filter((processedTx) => processedTx.id === id),
-            take(1),
-        );
-
         const result$ = this.processedTx$.pipe(
             filter((processedTx) => processedTx.id === id),
             take(1),
         );
 
-        return combineLatest([result$, gasResult$]).pipe(take(1));
+        return result$.pipe(take(1));
     }
 
     private txPipe(
@@ -271,7 +195,7 @@ export class AppService {
         const block: Block<string> = {
             BlockItems: blockItemList,
             rollupCurrentBlockNumber: +rollupCurTxNum >> 8,
-            blockNumberExpires: blockNumberExpires,
+            blockNumberExpires,
         };
 
         const ok = await handleBlock(block, storage);
@@ -309,7 +233,7 @@ function packZpTx(tx: Tx): ZpTx<string> {
 function copyMerkleTree(mt: IMerkleTree): IMerkleTree {
     const serialized = mt.serialize();
     const [height, _merkleState, length] = JSON.parse(serialized);
-    const utxoMt = MerkleTree(32 + 1);
+    const utxoMt = merkleTree(32 + 1);
     utxoMt.height = height;
     utxoMt._merkleState = _merkleState;
     utxoMt.length = length;

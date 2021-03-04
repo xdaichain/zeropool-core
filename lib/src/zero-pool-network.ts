@@ -36,7 +36,7 @@ import {
     Utxo,
     UtxoPair
 } from "./zero-pool-network.dto";
-import { Transaction } from "web3-core";
+import { TransactionReceipt } from "web3-core";
 import { HttpProvider } from 'web3-providers-http';
 import * as assert from "assert";
 import { BehaviorSubject, Observable } from "rxjs";
@@ -87,7 +87,6 @@ export class ZeroPoolNetwork {
         zpMnemonic: string,
         transactionJson: any,
         proverKey: any,
-        privateKey: string | undefined,
         cashedState?: MyUtxoState<string>,
         historyState?: HistoryState<string>,
     ) {
@@ -96,7 +95,7 @@ export class ZeroPoolNetwork {
         this.proverKey = proverKey;
         this.contractAddress = contractAddress;
         this.zpKeyPair = getBabyJubKeyPair(zpMnemonic);
-        this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider, privateKey);
+        this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
 
         if (cashedState) {
 
@@ -192,7 +191,7 @@ export class ZeroPoolNetwork {
         onTransactionHash?: (error: any, txHash: string | undefined) => void
     ): Promise<number> {
 
-        const transactionDetails: Transaction = await this.ZeroPool.deposit({
+        const transactionDetails = await this.ZeroPool.deposit({
             token,
             amount,
             txHash,
@@ -260,7 +259,7 @@ export class ZeroPoolNetwork {
             utxoDelta
         );
 
-        const [tx, txHash] = await this.prepareTransaction(
+        const [tx,] = await this.prepareTransaction(
             token,
             utxoDelta,
             utxoPair.utxoIn,
@@ -279,7 +278,7 @@ export class ZeroPoolNetwork {
     depositCancel(
         payNote: PayNote,
         waitBlocks = 0,
-        onTransactionHash?: (error: any, txHash: string | undefined) => void): Promise<Transaction> {
+        onTransactionHash?: (error: any, txHash: string | undefined) => void): Promise<TransactionReceipt> {
 
         return this.ZeroPool.cancelDeposit(payNote, waitBlocks, onTransactionHash);
     }
@@ -288,7 +287,7 @@ export class ZeroPoolNetwork {
         payNote: PayNote,
         waitBlocks = 0,
         onTransactionHash?: (error: any, txHash: string | undefined) => void
-    ): Promise<Transaction> {
+    ): Promise<TransactionReceipt> {
 
         return this.ZeroPool.withdraw(payNote, waitBlocks, onTransactionHash);
     }
@@ -299,7 +298,7 @@ export class ZeroPoolNetwork {
         waitBlocks = 0,
         gasPrice?: number | string,
         onTransactionHash?: (error: any, txHash: string | undefined) => void
-    ): Promise<Transaction> {
+    ): Promise<TransactionReceipt> {
 
         const rollupCurrentTxNum = await this.ZeroPool.getRollupTxNum();
         const version = await this.ZeroPool.getContractVersion();

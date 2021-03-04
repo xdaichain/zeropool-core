@@ -47,15 +47,6 @@ export class Tx {
     proof: Proof;
 }
 
-export class GasDonationRequest {
-    @ApiProperty()
-    gasTx: Tx;
-
-    @ApiProperty()
-    donationHash: string;
-}
-
-
 export class TransactionRequest {
     @ApiProperty()
     depositBlockNumber: string;

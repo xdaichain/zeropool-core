@@ -18,7 +18,7 @@ import {
     TxExternalFields,
     WithdrawEvent
 } from "./zeropool-contract.dto";
-import { Transaction } from 'web3-core';
+import { Transaction, TransactionReceipt } from 'web3-core';
 import { ZeroPoolAbi } from "./zeropool.abi";
 import { toHex } from "../../utils";
 
@@ -32,17 +32,16 @@ export class ZeroPoolContract {
     constructor(
         contractAddress: string,
         web3Provider: HttpProvider,
-        privateKey: string | undefined
     ) {
         this.contractAddress = contractAddress;
-        this.web3Ethereum = new Web3Ethereum(web3Provider, privateKey);
+        this.web3Ethereum = new Web3Ethereum(web3Provider);
         this.instance = this.web3Ethereum.createInstance(ZeroPoolAbi, contractAddress);
     }
 
     async deposit(
         deposit: Deposit,
         onTransactionHash?: (error: any, txHash: string | undefined) => void
-    ): Promise<Transaction> {
+    ): Promise<TransactionReceipt> {
 
         const params = [
             deposit.token,
@@ -56,14 +55,14 @@ export class ZeroPoolContract {
             to: this.contractAddress,
             value: deposit.amount,
             data
-        }, 1, onTransactionHash)) as Transaction;
+        }, 1, onTransactionHash)) as TransactionReceipt;
     };
 
     async cancelDeposit(
         payNote: PayNote,
         waitBlocks = 0,
         onTransactionHash?: (error: any, txHash: string | undefined) => void
-    ): Promise<Transaction> {
+    ): Promise<TransactionReceipt> {
 
         const params = [[
             [
@@ -80,7 +79,7 @@ export class ZeroPoolContract {
         return (await this.web3Ethereum.sendTransaction({
             to: this.contractAddress,
             data
-        }, waitBlocks, onTransactionHash)) as Transaction;
+        }, waitBlocks, onTransactionHash)) as TransactionReceipt;
 
     };
 
@@ -88,7 +87,7 @@ export class ZeroPoolContract {
         payNote: PayNote,
         waitBlocks = 0,
         onTransactionHash?: (error: any, txHash: string | undefined) => void
-    ): Promise<Transaction> {
+    ): Promise<TransactionReceipt> {
 
         const params = [[
             [
@@ -105,7 +104,7 @@ export class ZeroPoolContract {
         return (await this.web3Ethereum.sendTransaction({
             to: this.contractAddress,
             data
-        }, waitBlocks, onTransactionHash)) as Transaction;
+        }, waitBlocks, onTransactionHash)) as TransactionReceipt;
     };
 
     async publishBlock(
@@ -116,7 +115,7 @@ export class ZeroPoolContract {
         waitBlock = 0,
         gasPrice?: number | string,
         onTransactionHash?: (error: any, txHash: string | undefined) => void
-    ): Promise<Transaction> {
+    ): Promise<TransactionReceipt> {
 
         const params = [
             toHex(version),
@@ -131,13 +130,13 @@ export class ZeroPoolContract {
             to: this.contractAddress,
             data,
             gasPrice
-        }, waitBlock, onTransactionHash) as Transaction);
+        }, waitBlock, onTransactionHash) as TransactionReceipt);
     };
 
     async challengeTx(
         challengingBlockItem: BlockItemNote<string>,
         lastBlockItem: BlockItemNote<string>
-    ): Promise<Transaction> {
+    ): Promise<TransactionReceipt> {
 
         const params = [
             packBlockItemNote(challengingBlockItem),
@@ -149,13 +148,13 @@ export class ZeroPoolContract {
         return (await this.web3Ethereum.sendTransaction({
             to: this.contractAddress,
             data
-        })) as Transaction;
+        })) as TransactionReceipt;
     };
 
     async challengeUTXOTreeUpdate(
         challengingBlockItem: BlockItemNote<string>,
         previousBlockItem: BlockItemNote<string>
-    ): Promise<Transaction> {
+    ): Promise<TransactionReceipt> {
 
         const params = [
             packBlockItemNote(challengingBlockItem),
@@ -167,13 +166,13 @@ export class ZeroPoolContract {
         return (await this.web3Ethereum.sendTransaction({
             to: this.contractAddress,
             data
-        })) as Transaction;
+        })) as TransactionReceipt;
     };
 
     async challengeDoubleSpend(
         challengingBlockItem: BlockItemNote<string>,
         lastBlockItem: BlockItemNote<string>
-    ): Promise<Transaction> {
+    ): Promise<TransactionReceipt> {
 
         const params = [
             packBlockItemNote(challengingBlockItem),
@@ -185,7 +184,7 @@ export class ZeroPoolContract {
         return (await this.web3Ethereum.sendTransaction({
             to: this.contractAddress,
             data
-        })) as Transaction;
+        })) as TransactionReceipt;
     };
 
     async getDepositEvents(): Promise<DepositEvent[]> {

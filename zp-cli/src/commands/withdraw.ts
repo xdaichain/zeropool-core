@@ -24,13 +24,9 @@ TODO: put example of response
     const [tx, depositBlockNumber] = await this.zp.prepareWithdraw(this.assetAddress, withdrawAmount);
     this.log('TX', tx)
 
-    const [gasTx,] = await this.gasZp.prepareWithdraw(this.assetAddress, this.gasFee)
-    this.log('Gas TX', gasTx)
-
     cli.action.start(`Send transaction to relayer ${this.relayerEndpoint}`);
     const res = await axios.post(`${this.relayerEndpoint}/tx`, {
       tx,
-      gasTx,
       depositBlockNumber
     });
     cli.info(`Tx hash: ${res.data.transactionHash}`)
@@ -43,7 +39,7 @@ TODO: put example of response
 
     // ZerooPool `withdraw` call reqires ten blocks (CHALLENGE_EXPIRES_BLOCKS)
     // to be mined after withdrawal utxo has been sent
-    await this.zp.ZeroPool.web3Ethereum.waitBlockNumber(withdrawals[0].blockNumber + 10)
+    await this.zp.ZeroPool.web3Ethereum.waitBlockNumber(withdrawals[0].blockNumber + 11)
 
     cli.action.start(`Withdraw`);
     const withdrawRes = await this.zp.withdraw(withdrawals[0]);
