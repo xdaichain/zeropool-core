@@ -1,0 +1,14 @@
+version: '3.7'
+
+services:
+  relayer:
+    build:
+      context: .
+      target: relayer
+    ports:
+      - 3000:3000
+
+  cli:
+    build:
+      context: .
+      target: cli
