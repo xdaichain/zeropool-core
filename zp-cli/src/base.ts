@@ -8,10 +8,10 @@ const Eth = require('web3-eth');
 import * as fs from 'fs';
 import * as path from 'path';
 // @ts-ignore
-import * as transactionJson from './../../circom/circuitsCompiled/transaction.json';
+import * as transactionJson from './../../relayer/compiled/transaction.json';
 import { IConfig } from "@oclif/config";
 
-const proverKeyPath = path.join(__dirname, '../../circom/circuitsCompiled/transaction_pk.bin');
+const proverKeyPath = path.join(__dirname, '../../relayer/compiled/transaction_pk.bin');
 const proverKey = fs.readFileSync(proverKeyPath).buffer;
 
 // For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
