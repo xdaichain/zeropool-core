@@ -43,6 +43,16 @@ module.exports = {
       gasPrice: 20000000000,
       skipDryRun: true
     },
+    sokol: {
+      provider: () => new HDWalletProvider({
+        mnemonic: process.env.MNEMONIC,
+        providerOrUrl: "https://sokol.poa.network",
+      }),
+      network_id: 77,
+      timeoutBlocks: 50000,
+      // networkCheckTimeout: 10000000,
+      skipDryRun: true
+    }
   }
 };
 
