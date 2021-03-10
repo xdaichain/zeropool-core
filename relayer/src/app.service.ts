@@ -14,12 +14,7 @@ import { performance } from "perf_hooks";
 import { AppConfig } from "./app.config";
 import { Transaction } from "web3-core";
 
-const BN128_R = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
-
 export const storage = new MemoryStorage('zp');
-export const gasStorage = new MemoryStorage('gas');
-
-// const contractVersion = zp.ZeroPool.getContractVersion();
 
 type BlockItemDetails = {
     tx: ZpTx<string>,
@@ -53,7 +48,6 @@ export class AppService {
 
         combineLatest([
             fromPromise(initialScan(storage, zp)),
-            fromPromise(initialScan(gasStorage, gasZp)),
         ]).subscribe(() => {
             const t2 = performance.now();
             console.log(`sync is done in ${prettyMilliseconds(t2 - t1)}`);
@@ -162,7 +156,7 @@ export class AppService {
         waitBlocks = 0
     ): Promise<any> {
 
-        if (synced.filter(x => !x).length !== 0 || synced.length < 2) {
+        if (synced.filter(x => !x).length !== 0 || synced.length < 1) {
             throw new Error('relayer not synced');
         }
 

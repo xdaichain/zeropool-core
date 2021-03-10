@@ -13,4 +13,4 @@ services:
       context: .
       target: cli
     volumes:
-      - ./zp-cli/main.config.js:/app/zp-cli/main.config.js
+      - ./zp-cli/client.config.js:/app/zp-cli/client.config.js

@@ -1,3 +1,3 @@
 set -ex
 
-docker-compose run cli zp "$@"
+docker-compose run --rm cli zp "$@"

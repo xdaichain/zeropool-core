@@ -182,7 +182,7 @@ export default class Base extends Command {
   gasZp: ZeroPoolNetwork;
 
   async loadConfig(pathToConfig?: string): Promise<Config> {
-    const explorer = cosmiconfig('main');
+    const explorer = cosmiconfig('client');
     const result = pathToConfig
       ? await explorer.load(pathToConfig)
       : await explorer.search();
